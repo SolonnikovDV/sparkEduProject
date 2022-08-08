@@ -1,23 +1,20 @@
-import os
-
 import pandas.core.frame
 import pyspark.sql
-from pyspark.sql import SparkSession
 import datetime
-import pandas as pd
 
 # import org.apache.spark.sql.types.IntegerType
 from nltk.probability import FreqDist
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
 from pyspark.sql.functions import split, concat, col, lit, count, percentile_approx, mean, regexp_replace
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType
+
 
 # local import
 import config as cfg
 
 DATA_TIME = datetime.datetime.now()
 APP_NAME = 'PySparkShell'
+counter = 0
 
 
 def read_data_spark(csv_file: str):
@@ -109,15 +106,15 @@ def aggregate_df():
     print(f'SELECT TAB:\n{df.show(1)}')
 
     # left dataframe for join
-    df_ = df.select('DISTRICT',
-                    'year_month_date',
-                    'crimes_total',
-                    'crimes_monthly',
-                    'frequent_crime_types',
-                    'crime_type',
-                    'crime_type_count',
-                    'Lat',
-                    'Long', ) \
+    df_left_join = df.select('DISTRICT',
+                             'year_month_date',
+                             'crimes_total',
+                             'crimes_monthly',
+                             'frequent_crime_types',
+                             'crime_type',
+                             'crime_type_count',
+                             'Lat',
+                             'Long', ) \
         .groupBy('DISTRICT', 'year_month_date', 'crime_type') \
         .agg(count('crimes_total').alias('crimes_total'),
              count('crimes_monthly').alias('crimes_monthly'),
@@ -126,17 +123,17 @@ def aggregate_df():
              mean('Long').alias('Long'),
              ) \
         .withColumn('frequent_crime_types', lit('-'))
-    print(f'GROUP BY TAB_1:\n{df_.show(1)}')
+    print(f'GROUP BY TAB_1:\n{df_left_join.show(1)}')
 
-    df_ = df_.select('DISTRICT',
-                     'year_month_date',
-                     'crimes_total',
-                     'crimes_monthly',
-                     'frequent_crime_types',
-                     'crime_type',
-                     'crime_type_count',
-                     'Lat',
-                     'Long', ) \
+    df_left_join = df_left_join.select('DISTRICT',
+                                       'year_month_date',
+                                       'crimes_total',
+                                       'crimes_monthly',
+                                       'frequent_crime_types',
+                                       'crime_type',
+                                       'crime_type_count',
+                                       'Lat',
+                                       'Long', ) \
         .groupBy(['DISTRICT']) \
         .agg(count('crimes_total').alias('crimes_total'),
              count('crime_type'),
@@ -144,38 +141,35 @@ def aggregate_df():
              mean('Lat').alias('Lat'),
              mean('Long').alias('Long'), ).drop('count(crime_type)')
     print(f'DF_ FOR JOIN:\n'
-          f'{df_.show(5)}\n'
-          f'DF_ COUNT : {df_.count()}\n'
+          f'{df_left_join.show(5)}\n'
+          f'DF_ COUNT : {df_left_join.count()}\n'
           f'DF_ FOR JOIN TYPE:\n'
-          f'{type(df_)}')
+          f'{type(df_left_join)}')
 
+    # right data frame for join with a top 3 frequent values in the column
+    df_right_join_freq = df_with_crime_rate(df=df, rate=3).astype({'DISTRICT': str, 'crime_type': str})
     # convert pyspark.DataFrame to pandas.DataFrame to group dataframe be DISTRICT
     # and apply for any value in column list of values with crime_types
-    df_freq = df_with_crime_rate(df=df, rate=3).astype({'DISTRICT': str, 'crime_type': str})
-    df_freq = pandas_to_spark(df_freq)
-    df_freq = df_freq.withColumnRenamed('DISTRICT', 'DIST')
+    df_right_join_freq = pandas_to_spark(df_right_join_freq)
+    df_right_join_freq = df_right_join_freq.withColumnRenamed('DISTRICT', 'DIST')
 
-    df_agg = join_df_func(df_left=df_,
-                          df_right=df_freq,
+    df_agg = join_df_func(df_left=df_left_join,
+                          df_right=df_right_join_freq,
                           join_col_left='DISTRICT',
                           join_col_right='DIST',
                           join_type='right').drop('DIST')
-    # method below calls exception
-    # df_agg = df_agg.withColumn('crime_type', regexp_replace(col('crime_type'), "(", ""))
+    # replace chars in column values with using regex
+    df_agg = df_agg.withColumn('crime_type', regexp_replace('crime_type', "([\[\('\d+\]])|(\), )|(\))", ""))
     print(f'AGGREGATE TAB: \n{df_agg.show()}')
     return df_agg
 
 
 def save_df_to_parquet(df: pyspark.sql.dataframe.DataFrame):
-    df.write.parquet('parquet_data/aggregate_table')
+    # add version
+    ver = counter + 1
+    df.write.parquet(f'parquet_data/aggregate_table/ver_{ver}')
 
-# read_data_spark(cfg.CSV_OFFENSE_CODES)
-# read_data_spark(cfg.CSV_CRIME)
-# clean_offense_codes_df()
-# clean_crime_df()
-# join_df()
-# print(join_df().show(3, truncate=False))
-# aggregate_df()
+
 save_df_to_parquet(aggregate_df())
 
 

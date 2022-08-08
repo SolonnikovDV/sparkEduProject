@@ -44,8 +44,6 @@ def download_offence_codes_df():
     api.authenticate()
     api.dataset_download_file(DATA_SET, cfg.CSV_API_OFFENSE_CODE, cfg.CSV_OFFENSE_CODES)
 
-    # print(f'[INFO] : {DATA_TIME} >> Error API connection : ', e)
-
 
 download_offence_codes_df()
 
