@@ -1,10 +1,9 @@
 
 '''
 API tocken to kaggle
-{"username":"dmitrysolonnikov","key":"033712ebfab777c58b6711801711ba4c"}
 '''
-KAGGLE_USERNAME = 'dmitrysolonnikov'
-KAGGLE_KEY = 'fb88c25fc9afec68cfc52f2a174f0197'
+KAGGLE_USERNAME = 'enter you username'
+KAGGLE_KEY = 'enter your api key'
 CSV_API_CRIME = 'crime.csv'
 CSV_API_OFFENSE_CODE = 'offense_codes.csv'
 
@@ -23,7 +22,7 @@ PORT = '6432'
 SSLMODE = 'verify-full'
 DBNAME = 'analytics'
 USER = 'otus-psql'
-PASSWORD = 'g-am#-c-SUW'
+PASSWORD = 'your password'
 sslrootcert ='root@ainflow:/home/airflow-user/.postgresql/root.crt'
 TAB_CRIME = 'crime'
 TAB_OFFENSE_CODES = 'offense_codes'
